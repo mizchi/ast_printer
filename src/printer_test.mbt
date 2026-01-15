@@ -318,3 +318,310 @@ test "roundtrip: attribute" {
     ),
   )
 }
+
+///|
+test "roundtrip: lambda" {
+  assert_roundtrip(
+    (
+      #|fn apply(f : (Int) -> Int, x : Int) -> Int {
+      #|  f(x)
+      #|}
+    ),
+  )
+}
+
+///|
+test "roundtrip: array literal" {
+  assert_roundtrip(
+    (
+      #|fn make_array() -> Array[Int] {
+      #|  [1, 2, 3]
+      #|}
+    ),
+  )
+}
+
+///|
+test "roundtrip: labeled arguments" {
+  assert_roundtrip(
+    (
+      #|fn greet(name~ : String, age~ : Int) -> String {
+      #|  name
+      #|}
+    ),
+  )
+}
+
+///|
+test "roundtrip: optional arguments" {
+  assert_roundtrip(
+    (
+      #|fn greet(name~ : String = "world") -> String {
+      #|  name
+      #|}
+    ),
+  )
+}
+
+///|
+test "roundtrip: pipe operator" {
+  assert_roundtrip(
+    (
+      #|fn process(x : Int) -> Int {
+      #|  x |> add1 |> double
+      #|}
+    ),
+  )
+}
+
+///|
+test "roundtrip: try catch" {
+  assert_roundtrip(
+    (
+      #|fn safe_div(a : Int, b : Int) -> Int {
+      #|  try {
+      #|    a / b
+      #|  } catch {
+      #|    _ => 0
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "roundtrip: guard" {
+  assert_roundtrip(
+    (
+      #|fn check(x : Int) -> String {
+      #|  match x {
+      #|    n if n > 0 => "positive"
+      #|    _ => "non-positive"
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "roundtrip: loop break continue" {
+  assert_roundtrip(
+    (
+      #|fn find_first(arr : Array[Int]) -> Int {
+      #|  loop arr {
+      #|    [] => break 0
+      #|    [x, .. rest] => if x > 0 { break x } else { continue rest }
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "roundtrip: newtype" {
+  assert_roundtrip(
+    (
+      #|type UserId Int
+    ),
+  )
+}
+
+///|
+test "roundtrip: const" {
+  assert_roundtrip(
+    (
+      #|const PI : Double = 3.14159
+    ),
+  )
+}
+
+///|
+test "roundtrip: pub function" {
+  assert_roundtrip(
+    (
+      #|pub fn public_fn() -> Unit {
+      #|  ()
+      #|}
+    ),
+  )
+}
+
+///|
+test "roundtrip: priv function" {
+  assert_roundtrip(
+    (
+      #|priv fn private_fn() -> Unit {
+      #|  ()
+      #|}
+    ),
+  )
+}
+
+///|
+test "roundtrip: struct with mut field" {
+  assert_roundtrip(
+    (
+      #|struct Counter {
+      #|  mut count : Int
+      #|}
+    ),
+  )
+}
+
+///|
+test "roundtrip: enum with multiple fields" {
+  assert_roundtrip(
+    (
+      #|enum Shape {
+      #|  Circle(Double)
+      #|  Rectangle(Double, Double)
+      #|  Point
+      #|}
+    ),
+  )
+}
+
+///|
+test "roundtrip: trait with multiple methods" {
+  assert_roundtrip(
+    (
+      #|trait Comparable {
+      #|  compare(Self, Self) -> Int
+      #|  equal(Self, Self) -> Bool
+      #|}
+    ),
+  )
+}
+
+///|
+test "roundtrip: generic struct" {
+  assert_roundtrip(
+    (
+      #|struct Pair[A, B] {
+      #|  first : A
+      #|  second : B
+      #|}
+    ),
+  )
+}
+
+///|
+test "roundtrip: constraint" {
+  assert_roundtrip(
+    (
+      #|fn print_all[T : Show](items : Array[T]) -> Unit {
+      #|  ()
+      #|}
+    ),
+  )
+}
+
+///|
+test "roundtrip: nested match" {
+  assert_roundtrip(
+    (
+      #|fn nested(x : Option[Option[Int]]) -> Int {
+      #|  match x {
+      #|    Some(Some(n)) => n
+      #|    Some(None) => 0
+      #|    None => -1
+      #|  }
+      #|}
+    ),
+  )
+}
+
+///|
+test "roundtrip: string interpolation" {
+  assert_roundtrip(
+    (
+      #|fn greet(name : String) -> String {
+      #|  "Hello, \{name}!"
+      #|}
+    ),
+  )
+}
+
+///|
+test "roundtrip: range" {
+  assert_roundtrip(
+    (
+      #|fn sum_range() -> Int {
+      #|  let mut sum = 0
+      #|  for i in 0..<10 {
+      #|    sum = sum + i
+      #|  }
+      #|  sum
+      #|}
+    ),
+  )
+}
+
+///|
+test "roundtrip: method chain" {
+  assert_roundtrip(
+    (
+      #|fn process(s : String) -> String {
+      #|  s.trim().to_upper()
+      #|}
+    ),
+  )
+}
+
+///|
+test "roundtrip: binary operators" {
+  assert_roundtrip(
+    (
+      #|fn ops(a : Int, b : Int) -> Bool {
+      #|  a + b > 0 && a - b < 10 || a * b == 0
+      #|}
+    ),
+  )
+}
+
+///|
+test "roundtrip: unary operators" {
+  assert_roundtrip(
+    (
+      #|fn neg(x : Int, b : Bool) -> (Int, Bool) {
+      #|  (-x, not(b))
+      #|}
+    ),
+  )
+}
+
+///|
+test "roundtrip: record literal" {
+  assert_roundtrip(
+    (
+      #|fn make_point(x : Int, y : Int) -> Point {
+      #|  { x, y }
+      #|}
+    ),
+  )
+}
+
+///|
+test "roundtrip: record update" {
+  assert_roundtrip(
+    (
+      #|fn move_x(p : Point, dx : Int) -> Point {
+      #|  { ..p, x: p.x + dx }
+      #|}
+    ),
+  )
+}
+
+///|
+test "roundtrip: as pattern" {
+  assert_roundtrip(
+    (
+      #|fn first_or_all(arr : Array[Int]) -> Array[Int] {
+      #|  match arr {
+      #|    [x, ..] as all => all
+      #|    [] => []
+      #|  }
+      #|}
+    ),
+  )
+}

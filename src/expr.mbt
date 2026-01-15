@@ -694,32 +694,47 @@ pub fn print_expr(
     Try(body~, catch_~, try_else~, has_try~, ..) => {
       if has_try {
         buf.write_string("try {\n")
-        print_expr(buf, body)
-        buf.write_string("\n}")
+        // Unwrap Group(Brace) to avoid double braces
+        match body {
+          Group(expr~, group~, ..) if group is Brace => {
+            print_indent(buf, indent + 1)
+            print_expr(buf, expr, indent=indent + 1)
+            buf.write_char('\n')
+          }
+          _ => {
+            print_indent(buf, indent + 1)
+            print_expr(buf, body, indent=indent + 1)
+            buf.write_char('\n')
+          }
+        }
+        print_indent(buf, indent)
+        buf.write_char('}')
       } else {
-        print_expr(buf, body)
+        print_expr(buf, body, indent~)
       }
       if not(catch_.is_empty()) {
         buf.write_string(" catch {\n")
         for c in catch_ {
-          buf.write_string("  ")
+          print_indent(buf, indent + 1)
           print_pattern(buf, c.pattern)
           buf.write_string(" => ")
-          print_expr(buf, c.body)
+          print_expr(buf, c.body, indent=indent + 1)
           buf.write_char('\n')
         }
+        print_indent(buf, indent)
         buf.write_char('}')
       }
       match try_else {
         Some(cases) => {
           buf.write_string(" else {\n")
           for c in cases {
-            buf.write_string("  ")
+            print_indent(buf, indent + 1)
             print_pattern(buf, c.pattern)
             buf.write_string(" => ")
-            print_expr(buf, c.body)
+            print_expr(buf, c.body, indent=indent + 1)
             buf.write_char('\n')
           }
+          print_indent(buf, indent)
           buf.write_char('}')
         }
         None => ()
