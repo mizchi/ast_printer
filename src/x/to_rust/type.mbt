@@ -13,24 +13,9 @@ pub fn rust_is_unit_type(ty : @syntax.Type) -> Bool {
 
 ///|
 /// Map MoonBit type name to Rust type name.
+/// Delegates to the centralized mapping table.
 fn rust_map_type_name(name : String) -> String {
-  match name {
-    "Int" => "i32"
-    "UInt" => "u32"
-    "Int64" => "i64"
-    "UInt64" => "u64"
-    "Float" => "f32"
-    "Double" => "f64"
-    "Bool" => "bool"
-    "String" => "String"
-    "Byte" => "u8"
-    "Unit" => "()"
-    "Array" => "Vec"
-    "FixedArray" => "Vec"
-    "Map" => "HashMap"
-    "Iter" => "impl Iterator"
-    _ => name
-  }
+  rust_lookup_type(name)
 }
 
 ///|

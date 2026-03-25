@@ -1,31 +1,4 @@
 ///|
-/// Map MoonBit builtin function names to Rust macro names.
-/// Returns empty string if not a macro.
-fn rust_map_builtin_call(name : String) -> String {
-  match name {
-    "assert_eq" => "assert_eq"
-    "assert_ne" => "assert_ne"
-    "assert_true" => "assert"
-    "assert_false" => "assert" // Note: will need negation, but close enough
-    "println" => "println"
-    "print" => "print"
-    "eprintln" => "eprintln"
-    "panic" | "abort" => "panic"
-    _ => ""
-  }
-}
-
-///|
-/// Map MoonBit builtin function to Rust equivalent (non-macro).
-fn rust_map_builtin_ident(name : String) -> String {
-  match name {
-    "not" => "!"
-    "ignore" => "let _ ="
-    _ => ""
-  }
-}
-
-///|
 /// Print an expression as Rust.
 pub fn rust_print_expr(
   buf : StringBuilder,
@@ -90,41 +63,43 @@ pub fn rust_print_expr(
 
     // Function application
     Apply(func~, args~, attr~, ..) => {
-      // Check if this is a MoonBit builtin that maps to a Rust macro or different syntax
-      let macro_name = match func {
+      // Check if this is a MoonBit builtin with a Rust mapping
+      let call_kind = match func {
         Ident(id~, ..) =>
           match id.name {
-            Ident(name~) => rust_map_builtin_call(name)
-            _ => ""
+            Ident(name~) => rust_lookup_call(name)
+            _ => RustCallKind::None
           }
-        _ => ""
+        _ => RustCallKind::None
       }
-      let special = match func {
-        Ident(id~, ..) =>
-          match id.name {
-            Ident(name~) => rust_map_builtin_ident(name)
-            _ => ""
-          }
-        _ => ""
-      }
-      if macro_name.length() > 0 {
-        buf.write_string(macro_name)
-        buf.write_string("!(")
-        rust_print_arguments(buf, args)
-        buf.write_char(')')
-      } else if special == "!" {
-        // not(x) → !x
-        buf.write_char('!')
-        rust_print_arguments(buf, args)
-      } else if special == "let _ =" {
-        // ignore(x) → let _ = x
-        buf.write_string("let _ = ")
-        rust_print_arguments(buf, args)
-      } else {
-        rust_print_expr(buf, func)
-        buf.write_char('(')
-        rust_print_arguments(buf, args)
-        buf.write_char(')')
+      match call_kind {
+        Macro(macro_name) => {
+          buf.write_string(macro_name)
+          buf.write_string("!(")
+          rust_print_arguments(buf, args)
+          buf.write_char(')')
+        }
+        Func(func_name) => {
+          buf.write_string(func_name)
+          buf.write_char('(')
+          rust_print_arguments(buf, args)
+          buf.write_char(')')
+        }
+        PrefixOp(op) => {
+          buf.write_string(op)
+          rust_print_arguments(buf, args)
+        }
+        Statement(stmt) => {
+          buf.write_string(stmt)
+          buf.write_char(' ')
+          rust_print_arguments(buf, args)
+        }
+        None => {
+          rust_print_expr(buf, func)
+          buf.write_char('(')
+          rust_print_arguments(buf, args)
+          buf.write_char(')')
+        }
       }
       match attr {
         NoAttr => ()
@@ -575,7 +550,12 @@ pub fn rust_print_expr(
     DotApply(self~, method_name~, args~, return_self~, attr~, ..) => {
       rust_print_expr(buf, self)
       buf.write_char('.')
-      buf.write_string(method_name.name)
+      let mapped = rust_lookup_method(method_name.name)
+      if mapped.length() > 0 {
+        buf.write_string(mapped)
+      } else {
+        buf.write_string(method_name.name)
+      }
       buf.write_char('(')
       rust_print_arguments(buf, args)
       buf.write_char(')')

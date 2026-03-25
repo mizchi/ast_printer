@@ -206,7 +206,7 @@ test "rust: method call" {
     (
       #|fn len(s : String) -> Int { s.length() }
     ),
-    "fn len(s: String) -> i32 {\n    s.length()\n}\n",
+    "fn len(s: String) -> i32 {\n    s.len()\n}\n",
   )
 }
 
@@ -446,7 +446,7 @@ test "rust: chained method calls" {
     (
       #|fn process(s : String) -> Int { s.trim().length() }
     ),
-    "fn process(s: String) -> i32 {\n    s.trim().length()\n}\n",
+    "fn process(s: String) -> i32 {\n    s.trim().len()\n}\n",
   )
 }
 
@@ -816,7 +816,7 @@ test "rust: char literal" {
     (
       #|fn newline() -> Char { '\n' }
     ),
-    "fn newline() -> Char {\n    '\\n'\n}\n",
+    "fn newline() -> char {\n    '\\n'\n}\n",
   )
 }
 
@@ -978,6 +978,26 @@ test "rust: for-each multi binder" {
       #|}
     ),
     "fn print_pairs(arr: Vec<(i32, String)>) {\n    for (k, v) in arr {\n        println!(k.to_string())\n    }\n}\n",
+  )
+}
+
+///|
+test "rust: method length to len" {
+  assert_rust(
+    (
+      #|fn size(arr : Array[Int]) -> Int { arr.length() }
+    ),
+    "fn size(arr: Vec<i32>) -> i32 {\n    arr.len()\n}\n",
+  )
+}
+
+///|
+test "rust: method map to iter().map" {
+  assert_rust(
+    (
+      #|fn double_all(arr : Array[Int]) -> Unit { arr.map(fn(x) { x * 2 }) }
+    ),
+    "fn double_all(arr: Vec<i32>) {\n    arr.iter().map(|x| {\n    x * 2\n})\n}\n",
   )
 }
 

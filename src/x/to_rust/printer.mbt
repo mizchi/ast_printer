@@ -303,15 +303,9 @@ fn rust_print_decl_body(
 
 ///|
 /// Map MoonBit derive trait name to Rust derive trait name(s).
+/// Delegates to the centralized mapping table.
 fn rust_map_derive_trait(name : String) -> String {
-  match name {
-    "Show" => "Debug"
-    "Eq" => "PartialEq, Eq"
-    "Compare" => "PartialOrd, Ord"
-    "Hash" => "Hash"
-    "Default" => "Default"
-    _ => name
-  }
+  rust_lookup_derive(name)
 }
 
 ///|
