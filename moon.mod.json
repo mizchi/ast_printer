@@ -1,6 +1,6 @@
 {
   "name": "mizchi/ast_printer",
-  "version": "0.2.0",
+  "version": "0.2.3",
   "deps": {
     "moonbitlang/parser": "0.2.4"
   },
