@@ -302,7 +302,7 @@ test "roundtrip: impl trait" {
 test "roundtrip: type alias" {
   assert_roundtrip(
     (
-      #|typealias Point as P
+      #|type Point = Int
     ),
   )
 }
@@ -421,7 +421,7 @@ test "roundtrip: loop break continue" {
 test "roundtrip: newtype" {
   assert_roundtrip(
     (
-      #|type UserId Int
+      #|type UserId = Int
     ),
   )
 }

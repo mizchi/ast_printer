@@ -122,60 +122,6 @@ fn print_impl(buf : StringBuilder, impl_ : @syntax.Impl) -> Unit {
       print_decl_body(buf, body)
     }
     TopExpr(expr~, ..) => print_expr(buf, expr)
-    TopFuncAlias(pkg~, type_name~, targets~, vis~, attrs~, is_list~, doc~, ..) => {
-      print_doc_string(buf, doc)
-      print_attributes(buf, attrs)
-      print_visibility(buf, vis)
-      buf.write_string("fnalias ")
-      match pkg {
-        Some(p) => {
-          buf.write_char('@')
-          buf.write_string(p.name)
-        }
-        None => ()
-      }
-      match type_name {
-        Some(tn) => {
-          if pkg is Some(_) {
-            buf.write_char('.')
-          }
-          buf.write_string(tn.name)
-          buf.write_string("::")
-        }
-        None => if pkg is Some(_) { buf.write_char('.') }
-      }
-      print_alias_targets(buf, targets, is_list)
-    }
-    TopBatchTypeAlias(pkg~, targets~, vis~, attrs~, is_list~, doc~, ..) => {
-      print_doc_string(buf, doc)
-      print_attributes(buf, attrs)
-      print_visibility(buf, vis)
-      buf.write_string("typealias ")
-      match pkg {
-        Some(p) => {
-          buf.write_char('@')
-          buf.write_string(p.name)
-          buf.write_char('.')
-        }
-        None => ()
-      }
-      print_alias_targets(buf, targets, is_list)
-    }
-    TopBatchTraitAlias(pkg~, targets~, vis~, attrs~, is_list~, doc~, ..) => {
-      print_doc_string(buf, doc)
-      print_attributes(buf, attrs)
-      print_visibility(buf, vis)
-      buf.write_string("traitalias ")
-      match pkg {
-        Some(p) => {
-          buf.write_char('@')
-          buf.write_string(p.name)
-          buf.write_char('.')
-        }
-        None => ()
-      }
-      print_alias_targets(buf, targets, is_list)
-    }
     TopView(
       quantifiers~,
       source_ty~,
@@ -256,39 +202,6 @@ fn print_impl(buf : StringBuilder, impl_ : @syntax.Impl) -> Unit {
       }
       buf.write_char('}')
     }
-  }
-}
-
-///|
-fn print_alias_targets(
-  buf : StringBuilder,
-  targets : @list.List[@syntax.AliasTarget],
-  is_list : Bool,
-) -> Unit {
-  if is_list {
-    buf.write_char('(')
-  }
-  let mut first = true
-  for target in targets {
-    if not(first) {
-      buf.write_string(", ")
-    }
-    first = false
-    // target = original type name, binder = new alias name
-    // Syntax: typealias OriginalName as AliasName
-    match target.target {
-      Some(t) => {
-        buf.write_string(t.name)
-        buf.write_string(" as ")
-        buf.write_string(target.binder.name)
-      }
-      None =>
-        // No alias, just the name
-        buf.write_string(target.binder.name)
-    }
-  }
-  if is_list {
-    buf.write_char(')')
   }
 }
 
@@ -380,6 +293,7 @@ fn print_decl_body(
           }
         }
       }
+    DeclNone => ()
   }
 }
 
@@ -407,7 +321,7 @@ fn print_type_decl(buf : StringBuilder, decl : @syntax.TypeDecl) -> Unit {
       }
       buf.write_char('}')
     }
-    Record(fields) => {
+    Record(fields~, ..) => {
       buf.write_string("struct ")
       buf.write_string(decl.tycon)
       print_type_params(buf, decl.params)
@@ -426,17 +340,10 @@ fn print_type_decl(buf : StringBuilder, decl : @syntax.TypeDecl) -> Unit {
       buf.write_char('}')
     }
     Alias(ty) => {
-      buf.write_string("typealias ")
-      buf.write_string(decl.tycon)
-      print_type_params(buf, decl.params)
-      buf.write_string(" = ")
-      print_type(buf, ty)
-    }
-    Newtype(ty) => {
       buf.write_string("type ")
       buf.write_string(decl.tycon)
       print_type_params(buf, decl.params)
-      buf.write_char(' ')
+      buf.write_string(" = ")
       print_type(buf, ty)
     }
     Abstract => {
