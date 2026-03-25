@@ -1,11 +1,11 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "mizchi/ast_printer/src"
 
-import(
-  "moonbitlang/core/list"
-  "moonbitlang/parser/basic"
-  "moonbitlang/parser/syntax"
-)
+import {
+  "moonbitlang/core/list",
+  "moonbitlang/parser/basic",
+  "moonbitlang/parser/syntax",
+}
 
 // Values
 pub fn print_code((@list.List[@syntax.Impl], Array[@basic.Report])) -> String?
