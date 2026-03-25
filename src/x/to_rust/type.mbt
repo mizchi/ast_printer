@@ -1,4 +1,17 @@
 ///|
+/// Check if a type is Unit.
+pub fn rust_is_unit_type(ty : @syntax.Type) -> Bool {
+  match ty {
+    Name(constr_id~, ..) =>
+      match constr_id.id {
+        Ident(name~) => name == "Unit"
+        _ => false
+      }
+    _ => false
+  }
+}
+
+///|
 /// Map MoonBit type name to Rust type name.
 fn rust_map_type_name(name : String) -> String {
   match name {

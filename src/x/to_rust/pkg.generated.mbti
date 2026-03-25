@@ -7,6 +7,8 @@ import {
 }
 
 // Values
+pub fn rust_is_unit_type(@syntax.Type) -> Bool
+
 pub fn rust_print_constant(StringBuilder, @syntax.Constant) -> Unit
 
 pub fn rust_print_expr(StringBuilder, @syntax.Expr, indent? : Int) -> Unit

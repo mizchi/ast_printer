@@ -517,3 +517,353 @@ test "rust: array index set" {
     "fn set_first(arr: Vec<i32>) {\n    arr[0] = 99\n}\n",
   )
 }
+
+///|
+test "rust: arrow closure" {
+  assert_rust(
+    (
+      #|fn foo() -> Int {
+      #|  let f = fn(x) { x + 1 }
+      #|  f(10)
+      #|}
+    ),
+    "fn foo() -> i32 {\n    let f = |x| {\n        x + 1\n    };\n    f(10)\n}\n",
+  )
+}
+
+///|
+test "rust: record update" {
+  assert_rust(
+    (
+      #|fn move_right(p : Point) -> Point { { ..p, x: p.x + 1 } }
+    ),
+    "fn move_right(p: Point) -> Point {\n    { x: p.x + 1, ..p }\n}\n",
+  )
+}
+
+///|
+test "rust: augmented assign" {
+  assert_rust(
+    (
+      #|fn inc(x : Int) -> Unit { x += 1 }
+    ),
+    "fn inc(x: i32) {\n    x += 1\n}\n",
+  )
+}
+
+///|
+test "rust: map literal" {
+  assert_rust(
+    (
+      #|fn make_map() -> Map[String, Int] { { "a": 1, "b": 2 } }
+    ),
+    "fn make_map() -> HashMap<String, i32> {\n    HashMap::from([(\"a\", 1), (\"b\", 2)])\n}\n",
+  )
+}
+
+///|
+test "rust: int64 literal" {
+  assert_rust(
+    (
+      #|fn big() -> Int64 { 42L }
+    ),
+    "fn big() -> i64 {\n    42i64\n}\n",
+  )
+}
+
+///|
+test "rust: uint literal" {
+  assert_rust(
+    (
+      #|fn unsigned() -> UInt { 42U }
+    ),
+    "fn unsigned() -> u32 {\n    42u32\n}\n",
+  )
+}
+
+///|
+test "rust: float literal" {
+  assert_rust(
+    (
+      #|fn pi() -> Float { 3.14F }
+    ),
+    "fn pi() -> f32 {\n    3.14f32\n}\n",
+  )
+}
+
+///|
+test "rust: record pattern in match" {
+  assert_rust(
+    (
+      #|fn get_x(p : Point) -> Int {
+      #|  match p {
+      #|    { x, .. } => x
+      #|  }
+      #|}
+    ),
+    "fn get_x(p: Point) -> i32 {\n    match p {\n        { x, .. } => x,\n    }\n}\n",
+  )
+}
+
+///|
+test "rust: try? operator" {
+  assert_rust(
+    (
+      #|fn maybe_fail() -> Int {
+      #|  let x = try? { foo() }
+      #|  x
+      #|}
+    ),
+    "fn maybe_fail() -> i32 {\n    let x = foo()?;\n    x\n}\n",
+  )
+}
+
+///|
+test "rust: try! operator" {
+  assert_rust(
+    (
+      #|fn must_succeed() -> Int {
+      #|  let x = try! { foo() }
+      #|  x
+      #|}
+    ),
+    "fn must_succeed() -> i32 {\n    let x = foo().unwrap();\n    x\n}\n",
+  )
+}
+
+///|
+test "rust: break with value" {
+  assert_rust(
+    (
+      #|fn find_first() -> Int {
+      #|  while true {
+      #|    break 42
+      #|  }
+      #|}
+    ),
+    "fn find_first() -> i32 {\n    while true {\n        break 42\n    }\n}\n",
+  )
+}
+
+///|
+test "rust: trait with super" {
+  assert_rust(
+    (
+      #|trait Drawable : Displayable { draw(Self) -> Unit }
+    ),
+    "trait Drawable: Displayable {\n    fn draw(&self);\n}\n",
+  )
+}
+
+///|
+test "rust: trait with multiple methods" {
+  assert_rust(
+    (
+      #|trait Collection {
+      #|  size(Self) -> Int
+      #|  is_empty(Self) -> Bool
+      #|}
+    ),
+    "trait Collection {\n    fn size(&self) -> i32;\n    fn is_empty(&self) -> bool;\n}\n",
+  )
+}
+
+///|
+test "rust: impl relation" {
+  assert_rust(
+    (
+      #|impl Show for Point
+    ),
+    "impl Show for Point {}\n",
+  )
+}
+
+///|
+test "rust: array slice" {
+  assert_rust(
+    (
+      #|fn slice(arr : Array[Int]) -> Unit {
+      #|  let _ = arr[1:3]
+      #|}
+    ),
+    "fn slice(arr: Vec<i32>) {\n    let _ = arr[1..3];\n    ()\n}\n",
+  )
+}
+
+///|
+test "rust: labeled arg becomes positional" {
+  assert_rust(
+    (
+      #|fn make(x~ : Int, y~ : Int) -> Int { x + y }
+    ),
+    "fn make(x: i32, y: i32) -> i32 {\n    x + y\n}\n",
+  )
+}
+
+///|
+test "rust: optional param becomes Option" {
+  assert_rust(
+    (
+      #|fn greet(name? : String = "world") -> String { name }
+    ),
+    "fn greet(name: Option<String>) -> String {\n    name\n}\n",
+  )
+}
+
+///|
+test "rust: multiple return via tuple" {
+  assert_rust(
+    (
+      #|fn divmod(a : Int, b : Int) -> (Int, Int) { (a / b, a % b) }
+    ),
+    "fn divmod(a: i32, b: i32) -> (i32, i32) {\n    (a / b, a % b)\n}\n",
+  )
+}
+
+///|
+test "rust: nested match" {
+  assert_rust(
+    (
+      #|fn deep(x : Int?) -> Int {
+      #|  match x {
+      #|    Some(v) => match v {
+      #|      0 => 0
+      #|      n => n * 2
+      #|    }
+      #|    None => -1
+      #|  }
+      #|}
+    ),
+    "fn deep(x: Option<i32>) -> i32 {\n    match x {\n        Some(v) => match v {\n            0 => 0,\n            n => n * 2,\n        },\n        None => -1,\n    }\n}\n",
+  )
+}
+
+///|
+test "rust: generic struct" {
+  assert_rust(
+    (
+      #|struct Pair[A, B] { first : A; second : B }
+    ),
+    "struct Pair<A, B> {\n    pub first: A,\n    pub second: B,\n}\n",
+  )
+}
+
+///|
+test "rust: generic enum" {
+  assert_rust(
+    (
+      #|enum Result[T, E] { Ok(T); Err(E) }
+    ),
+    "enum Result<T, E> {\n    Ok(T),\n    Err(E),\n}\n",
+  )
+}
+
+///|
+test "rust: priv field" {
+  assert_rust(
+    (
+      #|struct Secret { priv data : String; pub name : String }
+    ),
+    "struct Secret {\n    data: String,\n    pub name: String,\n}\n",
+  )
+}
+
+///|
+test "rust: abstract type" {
+  assert_rust(
+    (
+      #|type Token
+    ),
+    "struct Token;\n",
+  )
+}
+
+///|
+test "rust: matches! with constructor" {
+  assert_rust(
+    (
+      #|fn is_circle(s : Shape) -> Bool { s is Circle(_) }
+    ),
+    "fn is_circle(s: Shape) -> bool {\n    matches!(s, Circle(_))\n}\n",
+  )
+}
+
+///|
+test "rust: let destructure struct" {
+  assert_rust(
+    (
+      #|fn get_coords(p : Point) -> (Int, Int) {
+      #|  let { x, y } = p
+      #|  (x, y)
+      #|}
+    ),
+    "fn get_coords(p: Point) -> (i32, i32) {\n    let { x, y } = p;\n    (x, y)\n}\n",
+  )
+}
+
+///|
+test "rust: char literal" {
+  assert_rust(
+    (
+      #|fn newline() -> Char { '\n' }
+    ),
+    "fn newline() -> Char {\n    '\\n'\n}\n",
+  )
+}
+
+///|
+test "rust: method with args" {
+  assert_rust(
+    (
+      #|fn push_val(arr : Array[Int], v : Int) -> Unit { arr.push(v) }
+    ),
+    "fn push_val(arr: Vec<i32>, v: i32) {\n    arr.push(v)\n}\n",
+  )
+}
+
+///|
+test "rust: multiline body" {
+  assert_rust(
+    (
+      #|fn complex(x : Int) -> Int {
+      #|  let a = x * 2
+      #|  let b = a + 1
+      #|  let c = if b > 10 { b } else { 10 }
+      #|  c
+      #|}
+    ),
+    "fn complex(x: i32) -> i32 {\n    let a = x * 2;\n    let b = a + 1;\n    let c = if b > 10 {\n        b\n    } else {\n        10\n    };\n    c\n}\n",
+  )
+}
+
+///|
+test "rust: raise to return Err" {
+  assert_rust(
+    (
+      #|fn validate(x : Int) -> Unit {
+      #|  if x < 0 { raise "invalid" }
+      #|}
+    ),
+    "fn validate(x: i32) {\n    if x < 0 {\n        return Err(\"invalid\")\n    }\n}\n",
+  )
+}
+
+///|
+test "rust: enum constructor call" {
+  assert_rust(
+    (
+      #|fn make_circle() -> Shape { Circle(1.0) }
+    ),
+    "fn make_circle() -> Shape {\n    Circle(1.0f64)\n}\n",
+  )
+}
+
+///|
+test "rust: comparison operators" {
+  assert_rust(
+    (
+      #|fn compare(a : Int, b : Int) -> Bool { a == b || a != b && a <= b }
+    ),
+    "fn compare(a: i32, b: i32) -> bool {\n    a == b || a != b && a <= b\n}\n",
+  )
+}

@@ -500,17 +500,23 @@ pub fn rust_print_expr(
       } else {
         rust_print_expr(buf, body, indent~)
       }
-    TryOperator(body~, kind~, ..) =>
+    TryOperator(body~, kind~, ..) => {
+      // Unwrap Group(Brace) wrapper that parser adds around try body
+      let inner = match body {
+        Group(expr~, group~, ..) if group is Brace => expr
+        _ => body
+      }
       match kind {
         Question => {
-          rust_print_expr(buf, body)
+          rust_print_expr(buf, inner)
           buf.write_char('?')
         }
         Exclamation => {
-          rust_print_expr(buf, body)
+          rust_print_expr(buf, inner)
           buf.write_string(".unwrap()")
         }
       }
+    }
 
     // Guard
     Guard(cond~, otherwise~, body~, ..) => {

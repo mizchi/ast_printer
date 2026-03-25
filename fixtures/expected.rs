@@ -7,6 +7,8 @@ fn add(x: i32, y: i32) -> i32 {
 pub fn hello() -> String {
     "hello".to_string()
 }
+
+#[derive(Clone)]
 struct Point {
     pub x: i32,
     pub y: i32,
@@ -62,21 +64,12 @@ fn nums() -> Vec<i32> {
     vec![1, 2, 3]
 }
 struct Handle;
-fn apply(f: fn(i32) -> i32, x: i32) -> i32 {
+struct Wrapper(i32);
+fn apply_fn(f: fn(i32) -> i32, x: i32) -> i32 {
     f(x)
 }
-fn sum_arr(arr: Vec<i32>) -> i32 {
-    let mut total = 0;
-    for x in arr {
-        total = total + x
-    };
-    total
-}
-fn area(s: Shape) -> f64 {
-    match s {
-        Shape::Circle(r) => 3.14f64 * r * r,
-        Shape::Rect(w, h) => w * h,
-    }
+fn move_right(p: Point) -> Point {
+    Point { x: p.x + 1, ..p }
 }
 fn classify(x: i32) -> String {
     match x {
@@ -94,15 +87,6 @@ fn is_weekend(day: i32) -> bool {
         6 | 7 => true,
         _ => false,
     }
-}
-fn check(x: i32) -> i32 {
-    if x < 0 {
-        return 0
-    };
-    x
-}
-fn identity<T>(x: T) -> T {
-    x
 }
 fn negate(x: i32) -> i32 {
     -x
@@ -128,7 +112,38 @@ fn unwrap_or(opt: Option<i32>, default: i32) -> i32 {
         None => default,
     }
 }
-struct Wrapper(i32);
+fn identity<T>(x: T) -> T {
+    x
+}
+fn divmod(a: i32, b: i32) -> (i32, i32) {
+    (a / b, a % b)
+}
+fn deep(x: Option<i32>) -> i32 {
+    match x {
+        Some(v) => match v {
+            0 => 0,
+            n => n * 2,
+        },
+        None => -1,
+    }
+}
+struct Pair<A, B> {
+    pub first: A,
+    pub second: B,
+}
+fn complex(x: i32) -> i32 {
+    let a = x * 2;
+    let b = a + 1;
+    let c = if b > 10 {
+        b
+    } else {
+        10
+    };
+    c
+}
+fn compare(a: i32, b: i32) -> bool {
+    a == b || a != b && a <= b
+}
 
 #[cfg(test)]
 mod tests {
@@ -184,18 +199,16 @@ mod tests {
     }
 
     #[test]
-    fn test_apply() {
-        assert_eq!(apply(|x| x * 2, 5), 10);
+    fn test_apply_fn() {
+        assert_eq!(apply_fn(|x| x * 2, 5), 10);
     }
 
     #[test]
-    fn test_sum_arr() {
-        assert_eq!(sum_arr(vec![1, 2, 3, 4]), 10);
-    }
-
-    #[test]
-    fn test_area() {
-        assert_eq!(area(Shape::Rect(3.0, 4.0)), 12.0);
+    fn test_move_right() {
+        let p = Point { x: 1, y: 2 };
+        let q = move_right(p);
+        assert_eq!(q.x, 2);
+        assert_eq!(q.y, 2);
     }
 
     #[test]
@@ -212,20 +225,9 @@ mod tests {
 
     #[test]
     fn test_is_weekend() {
-        assert_eq!(is_weekend(6), true);
-        assert_eq!(is_weekend(3), false);
-    }
-
-    #[test]
-    fn test_check() {
-        assert_eq!(check(-5), 0);
-        assert_eq!(check(10), 10);
-    }
-
-    #[test]
-    fn test_identity() {
-        assert_eq!(identity(42), 42);
-        assert_eq!(identity("hello"), "hello");
+        assert!(is_weekend(6));
+        assert!(is_weekend(7));
+        assert!(!is_weekend(3));
     }
 
     #[test]
@@ -250,5 +252,35 @@ mod tests {
     fn test_unwrap_or() {
         assert_eq!(unwrap_or(Some(5), 0), 5);
         assert_eq!(unwrap_or(None, 0), 0);
+    }
+
+    #[test]
+    fn test_identity() {
+        assert_eq!(identity(42), 42);
+        assert_eq!(identity("hello"), "hello");
+    }
+
+    #[test]
+    fn test_divmod() {
+        assert_eq!(divmod(10, 3), (3, 1));
+    }
+
+    #[test]
+    fn test_deep() {
+        assert_eq!(deep(Some(5)), 10);
+        assert_eq!(deep(Some(0)), 0);
+        assert_eq!(deep(None), -1);
+    }
+
+    #[test]
+    fn test_complex() {
+        assert_eq!(complex(3), 10);  // a=6, b=7, c=10 (7 < 10)
+        assert_eq!(complex(6), 13);  // a=12, b=13, c=13 (13 > 10)
+    }
+
+    #[test]
+    fn test_compare() {
+        assert!(compare(1, 1));   // 1==1 is true
+        assert!(compare(1, 2));   // 1!=2 && 1<=2 is true
     }
 }

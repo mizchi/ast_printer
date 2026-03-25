@@ -146,20 +146,9 @@ fn rust_print_fun_decl(buf : StringBuilder, decl : @syntax.FunDecl) -> Unit {
   buf.write_char(')')
   match decl.return_type {
     Some(t) =>
-      // Check if return type is Unit -> omit in Rust
-      match t {
-        Name(constr_id~, ..) =>
-          match constr_id.id {
-            Ident(name~) if name == "Unit" => ()
-            _ => {
-              buf.write_string(" -> ")
-              rust_print_type(buf, t)
-            }
-          }
-        _ => {
-          buf.write_string(" -> ")
-          rust_print_type(buf, t)
-        }
+      if not(rust_is_unit_type(t)) {
+        buf.write_string(" -> ")
+        rust_print_type(buf, t)
       }
     None => ()
   }
@@ -355,10 +344,11 @@ fn rust_print_trait_decl(buf : StringBuilder, decl : @syntax.TraitDecl) -> Unit 
     rust_print_parameters(buf, non_self_params)
     buf.write_char(')')
     match m.return_type {
-      Some(t) => {
-        buf.write_string(" -> ")
-        rust_print_type(buf, t)
-      }
+      Some(t) =>
+        if not(rust_is_unit_type(t)) {
+          buf.write_string(" -> ")
+          rust_print_type(buf, t)
+        }
       None => ()
     }
     buf.write_string(";\n")
