@@ -1,4 +1,31 @@
 ///|
+/// Map MoonBit builtin function names to Rust macro names.
+/// Returns empty string if not a macro.
+fn rust_map_builtin_call(name : String) -> String {
+  match name {
+    "assert_eq" => "assert_eq"
+    "assert_ne" => "assert_ne"
+    "assert_true" => "assert"
+    "assert_false" => "assert" // Note: will need negation, but close enough
+    "println" => "println"
+    "print" => "print"
+    "eprintln" => "eprintln"
+    "panic" | "abort" => "panic"
+    _ => ""
+  }
+}
+
+///|
+/// Map MoonBit builtin function to Rust equivalent (non-macro).
+fn rust_map_builtin_ident(name : String) -> String {
+  match name {
+    "not" => "!"
+    "ignore" => "let _ ="
+    _ => ""
+  }
+}
+
+///|
 /// Print an expression as Rust.
 pub fn rust_print_expr(
   buf : StringBuilder,
@@ -63,10 +90,42 @@ pub fn rust_print_expr(
 
     // Function application
     Apply(func~, args~, attr~, ..) => {
-      rust_print_expr(buf, func)
-      buf.write_char('(')
-      rust_print_arguments(buf, args)
-      buf.write_char(')')
+      // Check if this is a MoonBit builtin that maps to a Rust macro or different syntax
+      let macro_name = match func {
+        Ident(id~, ..) =>
+          match id.name {
+            Ident(name~) => rust_map_builtin_call(name)
+            _ => ""
+          }
+        _ => ""
+      }
+      let special = match func {
+        Ident(id~, ..) =>
+          match id.name {
+            Ident(name~) => rust_map_builtin_ident(name)
+            _ => ""
+          }
+        _ => ""
+      }
+      if macro_name.length() > 0 {
+        buf.write_string(macro_name)
+        buf.write_string("!(")
+        rust_print_arguments(buf, args)
+        buf.write_char(')')
+      } else if special == "!" {
+        // not(x) → !x
+        buf.write_char('!')
+        rust_print_arguments(buf, args)
+      } else if special == "let _ =" {
+        // ignore(x) → let _ = x
+        buf.write_string("let _ = ")
+        rust_print_arguments(buf, args)
+      } else {
+        rust_print_expr(buf, func)
+        buf.write_char('(')
+        rust_print_arguments(buf, args)
+        buf.write_char(')')
+      }
       match attr {
         NoAttr => ()
         Exclamation =>
@@ -214,6 +273,10 @@ pub fn rust_print_expr(
         None => ()
       }
       buf.write_string("for ")
+      let binder_count = binders.length()
+      if binder_count > 1 {
+        buf.write_char('(')
+      }
       let mut first = true
       for b in binders {
         if not(first) {
@@ -224,6 +287,9 @@ pub fn rust_print_expr(
           Some(binder) => buf.write_string(binder.name)
           None => buf.write_char('_')
         }
+      }
+      if binder_count > 1 {
+        buf.write_char(')')
       }
       buf.write_string(" in ")
       rust_print_expr(buf, expr, indent~)
@@ -506,7 +572,7 @@ pub fn rust_print_expr(
       buf.write_string("::")
       buf.write_string(method_name.name)
     }
-    DotApply(self~, method_name~, args~, attr~, ..) => {
+    DotApply(self~, method_name~, args~, return_self~, attr~, ..) => {
       rust_print_expr(buf, self)
       buf.write_char('.')
       buf.write_string(method_name.name)
@@ -520,6 +586,11 @@ pub fn rust_print_expr(
             " /* NOTE: `!` = may raise error. Wrap in Result and use `?` or `.unwrap()`. */",
           )
         Question => buf.write_char('?')
+      }
+      if return_self {
+        buf.write_string(
+          " /* NOTE: MoonBit `.method().` (trailing dot) returns self for chaining. In Rust, the method must return Self. */",
+        )
       }
     }
 
@@ -751,7 +822,12 @@ pub fn rust_print_expr(
             rust_print_expr(arg_buf, expr)
             args.push(arg_buf)
           }
-          Source(_) => ()
+          Source(src) => {
+            buf.write_string("{}")
+            let arg_buf = StringBuilder::new()
+            arg_buf.write_string(src.source)
+            args.push(arg_buf)
+          }
         }
       }
       buf.write_char('"')

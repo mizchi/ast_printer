@@ -117,18 +117,23 @@ fn rust_print_impl(buf : StringBuilder, impl_ : @syntax.Impl) -> Unit {
       buf.write_string("fn ")
       buf.write_string(rust_convert_name(method_name.name))
       buf.write_char('(')
-      // Add &self as first param for trait impl methods
-      buf.write_string("&self")
+      // Add &self or &mut self based on whether body contains mutations
+      if rust_body_has_mutation(body) {
+        buf.write_string("&mut self")
+      } else {
+        buf.write_string("&self")
+      }
       if not(params.is_empty()) {
         buf.write_string(", ")
       }
       rust_print_parameters(buf, params)
       buf.write_char(')')
       match ret_ty {
-        Some(t) => {
-          buf.write_string(" -> ")
-          rust_print_type(buf, t)
-        }
+        Some(t) =>
+          if not(rust_is_unit_type(t)) {
+            buf.write_string(" -> ")
+            rust_print_type(buf, t)
+          }
         None => ()
       }
       buf.write_char(' ')
@@ -164,6 +169,43 @@ fn rust_print_impl(buf : StringBuilder, impl_ : @syntax.Impl) -> Unit {
         reason="MoonBit `using` re-exports types/values from another package.",
         hint="Replace with `use crate::module::Type;` or `pub use` for re-exports.",
       )
+  }
+}
+
+///|
+/// Check if a DeclBody contains mutation (Mutate/Assign expressions).
+/// Simple heuristic: check top-level expression.
+fn rust_body_has_mutation(body : @syntax.DeclBody) -> Bool {
+  match body {
+    DeclBody(expr~, ..) => rust_expr_has_mutation(expr)
+    _ => false
+  }
+}
+
+///|
+/// Check if an expression contains mutation (shallow check).
+fn rust_expr_has_mutation(expr : @syntax.Expr) -> Bool {
+  match expr {
+    Mutate(..) | ArraySet(..) | ArrayAugmentedSet(..) => true
+    Assign(augmented_by~, ..) => augmented_by is Some(_)
+    Sequence(exprs~, last_expr~, ..) => {
+      for e in exprs {
+        if rust_expr_has_mutation(e) {
+          return true
+        }
+      }
+      rust_expr_has_mutation(last_expr)
+    }
+    Let(body~, ..) | LetMut(body~, ..) | LetFn(body~, ..) =>
+      rust_expr_has_mutation(body)
+    If(ifso~, ifnot~, ..) =>
+      rust_expr_has_mutation(ifso) ||
+      (match ifnot {
+        Some(e) => rust_expr_has_mutation(e)
+        None => false
+      })
+    Group(expr~, ..) => rust_expr_has_mutation(expr)
+    _ => false
   }
 }
 
@@ -311,9 +353,29 @@ fn rust_print_type_decl(buf : StringBuilder, decl : @syntax.TypeDecl) -> Unit {
         buf.write_string(constr.name.name)
         match constr.args {
           Some(args) if not(args.is_empty()) => {
-            buf.write_char('(')
-            rust_print_constr_params(buf, args)
-            buf.write_char(')')
+            // Check if any arg has a label → struct variant
+            let has_labels = args.iter().any(fn(p) { p.label is Some(_) })
+            if has_labels {
+              buf.write_string(" {\n")
+              for p in args {
+                rust_print_indent(buf, 2)
+                match p.label {
+                  Some(label) => {
+                    buf.write_string(label.name)
+                    buf.write_string(": ")
+                  }
+                  None => ()
+                }
+                rust_print_type(buf, p.ty)
+                buf.write_string(",\n")
+              }
+              rust_print_indent(buf, 1)
+              buf.write_char('}')
+            } else {
+              buf.write_char('(')
+              rust_print_constr_params(buf, args)
+              buf.write_char(')')
+            }
           }
           _ => ()
         }

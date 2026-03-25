@@ -172,14 +172,23 @@ test "rust: pipe operator desugaring" {
 }
 
 ///|
-// TODO: string interpolation needs investigation on how parser represents \{expr}
-// test "rust: string interpolation" {
-//   let source = "fn greet(name : String) -> String { \"hello \\{name}\" }"
-//   assert_rust(
-//     source,
-//     "fn greet(name: String) -> String {\n    format!(\"hello {}\", name)\n}\n",
-//   )
-// }
+test "rust: string interpolation" {
+  let q = "\""
+  let bs = "\\"
+  let source = "fn greet(name : String) -> String { " +
+    q +
+    "hello " +
+    bs +
+    "{name}" +
+    q +
+    " }"
+  let (impls, errors) = @moonbitlang/parser.parse_string(source)
+  assert_eq(errors.length(), 0)
+  let result = to_rust(impls)
+  assert_eq(
+    result, "fn greet(name: String) -> String {\n    format!(\"hello {}\", name)\n}\n",
+  )
+}
 
 ///|
 test "rust: option type" {
@@ -427,7 +436,7 @@ test "rust: logical not" {
     (
       #|fn invert(b : Bool) -> Bool { not(b) }
     ),
-    "fn invert(b: bool) -> bool {\n    not(b)\n}\n",
+    "fn invert(b: bool) -> bool {\n    !b\n}\n",
   )
 }
 
@@ -914,7 +923,61 @@ test "rust: test block" {
     (
       #|test "addition" { assert_eq(1 + 1, 2) }
     ),
-    "#[test]\nfn test_addition() {\n    assert_eq(1 + 1, 2)\n}\n",
+    "#[test]\nfn test_addition() {\n    assert_eq!(1 + 1, 2)\n}\n",
+  )
+}
+
+///|
+test "rust: assert_eq macro" {
+  assert_rust(
+    (
+      #|test "basic" { assert_eq(1, 1) }
+    ),
+    "#[test]\nfn test_basic() {\n    assert_eq!(1, 1)\n}\n",
+  )
+}
+
+///|
+test "rust: println macro" {
+  assert_rust(
+    (
+      #|fn hello() -> Unit { println("hello") }
+    ),
+    "fn hello() {\n    println!(\"hello\")\n}\n",
+  )
+}
+
+///|
+test "rust: not to bang" {
+  assert_rust(
+    (
+      #|fn nope(b : Bool) -> Bool { not(b) }
+    ),
+    "fn nope(b: bool) -> bool {\n    !b\n}\n",
+  )
+}
+
+///|
+test "rust: enum struct variant" {
+  assert_rust(
+    (
+      #|enum Expr { Lit(Int); BinOp(op~ : String, lhs~ : Int, rhs~ : Int) }
+    ),
+    "enum Expr {\n    Lit(i32),\n    BinOp {\n        op: String,\n        lhs: i32,\n        rhs: i32,\n    },\n}\n",
+  )
+}
+
+///|
+test "rust: for-each multi binder" {
+  assert_rust(
+    (
+      #|fn print_pairs(arr : Array[(Int, String)]) -> Unit {
+      #|  for k, v in arr {
+      #|    println(k.to_string())
+      #|  }
+      #|}
+    ),
+    "fn print_pairs(arr: Vec<(i32, String)>) {\n    for (k, v) in arr {\n        println!(k.to_string())\n    }\n}\n",
   )
 }
 

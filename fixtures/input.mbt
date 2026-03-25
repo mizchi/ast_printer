@@ -257,3 +257,14 @@ fn sum_range() -> Int {
 test "addition" {
   assert_eq(1 + 1, 2)
 }
+
+enum Expr {
+  Lit(Int)
+  BinOp(op~ : String, lhs~ : Int, rhs~ : Int)
+}
+
+fn print_pairs(arr : Array[(Int, String)]) -> Unit {
+  for k, v in arr {
+    println(k.to_string())
+  }
+}

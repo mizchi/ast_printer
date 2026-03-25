@@ -164,6 +164,20 @@ fn test_addition() {
     assert_eq!(1 + 1, 2)
 }
 
+enum Expr {
+    Lit(i32),
+    BinOp {
+        op: String,
+        lhs: i32,
+        rhs: i32,
+    },
+}
+fn print_pairs(arr: Vec<(i32, String)>) {
+    for (k, v) in arr {
+        println!("{}", k.to_string())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -301,6 +315,19 @@ mod tests {
     fn test_compare() {
         assert!(compare(1, 1));   // 1==1 is true
         assert!(compare(1, 2));   // 1!=2 && 1<=2 is true
+    }
+
+    #[test]
+    fn test_enum_struct_variant() {
+        let e = Expr::BinOp { op: "+".to_string(), lhs: 1, rhs: 2 };
+        match e {
+            Expr::BinOp { op, lhs, rhs } => {
+                assert_eq!(op, "+");
+                assert_eq!(lhs, 1);
+                assert_eq!(rhs, 2);
+            }
+            _ => panic!("expected BinOp"),
+        }
     }
 
     #[test]
