@@ -1,7 +1,10 @@
 import {
+  "moonbitlang/core/list",
   "moonbitlang/parser/syntax",
-  "moonbitlang/parser/tokens",
-  "moonbitlang/parser",
   "moonbitlang/parser/attribute",
   "moonbitlang/parser/basic",
 }
+
+import {
+  "moonbitlang/parser",
+} for "test"
