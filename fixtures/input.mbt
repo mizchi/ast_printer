@@ -73,3 +73,83 @@ fn nums() -> Array[Int] {
 }
 
 type Handle
+
+fn apply(f : (Int) -> Int, x : Int) -> Int {
+  f(x)
+}
+
+fn sum_arr(arr : Array[Int]) -> Int {
+  let mut total = 0
+  for x in arr {
+    total = total + x
+  }
+  total
+}
+
+fn area(s : Shape) -> Double {
+  match s {
+    Circle(r) => 3.14 * r * r
+    Rect(w, h) => w * h
+  }
+}
+
+fn classify(x : Int) -> String {
+  match x {
+    n if n > 0 => "positive"
+    n if n < 0 => "negative"
+    _ => "zero"
+  }
+}
+
+fn first_of_pair(pair : (Int, Int)) -> Int {
+  let (a, _) = pair
+  a
+}
+
+fn is_weekend(day : Int) -> Bool {
+  match day {
+    6 | 7 => true
+    _ => false
+  }
+}
+
+fn check(x : Int) -> Int {
+  if x < 0 {
+    return 0
+  }
+  x
+}
+
+fn identity[T](x : T) -> T {
+  x
+}
+
+fn negate(x : Int) -> Int {
+  -x
+}
+
+fn clamp(x : Int, lo : Int, hi : Int) -> Int {
+  if x < lo {
+    lo
+  } else {
+    if x > hi {
+      hi
+    } else {
+      x
+    }
+  }
+}
+
+fn typed() -> Int {
+  let x : Int = 42
+  x
+}
+
+fn unwrap_or(opt : Int?, default : Int) -> Int {
+  match opt {
+    Some(v) => v
+    None => default
+  }
+}
+
+struct Wrapper(Int)

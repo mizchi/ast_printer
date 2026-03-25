@@ -230,7 +230,15 @@ pub fn rust_print_expr(
     // Let bindings
     Let(pattern~, expr~, body~, ..) => {
       buf.write_string("let ")
-      rust_print_pattern(buf, pattern)
+      // Handle type-annotated patterns: let x : T = ... => let x: T = ...
+      match pattern {
+        Constraint(pat~, ty~, ..) => {
+          rust_print_pattern(buf, pat)
+          buf.write_string(": ")
+          rust_print_type(buf, ty)
+        }
+        _ => rust_print_pattern(buf, pattern)
+      }
       buf.write_string(" = ")
       rust_print_expr(buf, expr, indent~)
       buf.write_string(";\n")
@@ -259,6 +267,14 @@ pub fn rust_print_expr(
       buf.write_string(" = |")
       rust_print_closure_params(buf, func.parameters)
       buf.write_string("| ")
+      match func.return_type {
+        Some(t) => {
+          buf.write_string("-> ")
+          rust_print_type(buf, t)
+          buf.write_char(' ')
+        }
+        None => ()
+      }
       buf.write_string("{\n")
       rust_print_indent(buf, indent + 1)
       rust_print_expr(buf, func.body, indent=indent + 1)

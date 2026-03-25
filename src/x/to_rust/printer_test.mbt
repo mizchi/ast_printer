@@ -245,3 +245,275 @@ test "rust: trait" {
     "trait Printable {\n    fn to_string(&self) -> String;\n}\n",
   )
 }
+
+///|
+test "rust: for each" {
+  assert_rust(
+    (
+      #|fn sum(arr : Array[Int]) -> Int {
+      #|  let mut total = 0
+      #|  for x in arr {
+      #|    total = total + x
+      #|  }
+      #|  total
+      #|}
+    ),
+    "fn sum(arr: Vec<i32>) -> i32 {\n    let mut total = 0;\n    for x in arr {\n        total = total + x\n    };\n    total\n}\n",
+  )
+}
+
+///|
+test "rust: closure" {
+  assert_rust(
+    (
+      #|fn apply(f : (Int) -> Int, x : Int) -> Int { f(x) }
+    ),
+    "fn apply(f: fn(i32) -> i32, x: i32) -> i32 {\n    f(x)\n}\n",
+  )
+}
+
+///|
+test "rust: lambda" {
+  assert_rust(
+    (
+      #|fn foo() -> Int {
+      #|  let f = fn(x : Int) -> Int { x + 1 }
+      #|  f(10)
+      #|}
+    ),
+    "fn foo() -> i32 {\n    let f = |x: i32| -> i32 {\n        x + 1\n    };\n    f(10)\n}\n",
+  )
+}
+
+///|
+test "rust: record creation" {
+  assert_rust(
+    (
+      #|struct Point { x : Int; y : Int }
+      #|fn origin() -> Point { { x: 0, y: 0 } }
+    ),
+    "struct Point {\n    pub x: i32,\n    pub y: i32,\n}\nfn origin() -> Point {\n    { x: 0, y: 0 }\n}\n",
+  )
+}
+
+///|
+test "rust: field access" {
+  assert_rust(
+    (
+      #|fn get_x(p : Point) -> Int { p.x }
+    ),
+    "fn get_x(p: Point) -> i32 {\n    p.x\n}\n",
+  )
+}
+
+///|
+test "rust: pattern match enum" {
+  assert_rust(
+    (
+      #|fn area(s : Shape) -> Double {
+      #|  match s {
+      #|    Circle(r) => 3.14 * r * r
+      #|    Rect(w, h) => w * h
+      #|  }
+      #|}
+    ),
+    "fn area(s: Shape) -> f64 {\n    match s {\n        Circle(r) => 3.14f64 * r * r,\n        Rect(w, h) => w * h,\n    }\n}\n",
+  )
+}
+
+///|
+test "rust: match with guard" {
+  assert_rust(
+    (
+      #|fn classify(x : Int) -> String {
+      #|  match x {
+      #|    n if n > 0 => "positive"
+      #|    n if n < 0 => "negative"
+      #|    _ => "zero"
+      #|  }
+      #|}
+    ),
+    "fn classify(x: i32) -> String {\n    match x {\n        n if n > 0 => \"positive\",\n        n if n < 0 => \"negative\",\n        _ => \"zero\",\n    }\n}\n",
+  )
+}
+
+///|
+test "rust: tuple pattern" {
+  assert_rust(
+    (
+      #|fn first(pair : (Int, Int)) -> Int {
+      #|  let (a, _) = pair
+      #|  a
+      #|}
+    ),
+    "fn first(pair: (i32, i32)) -> i32 {\n    let (a, _) = pair;\n    a\n}\n",
+  )
+}
+
+///|
+test "rust: or pattern" {
+  assert_rust(
+    (
+      #|fn is_weekend(day : Int) -> Bool {
+      #|  match day {
+      #|    6 | 7 => true
+      #|    _ => false
+      #|  }
+      #|}
+    ),
+    "fn is_weekend(day: i32) -> bool {\n    match day {\n        6 | 7 => true,\n        _ => false,\n    }\n}\n",
+  )
+}
+
+///|
+test "rust: return early" {
+  assert_rust(
+    (
+      #|fn check(x : Int) -> Int {
+      #|  if x < 0 { return 0 }
+      #|  x
+      #|}
+    ),
+    "fn check(x: i32) -> i32 {\n    if x < 0 {\n        return 0\n    };\n    x\n}\n",
+  )
+}
+
+///|
+test "rust: nested function" {
+  assert_rust(
+    (
+      #|fn outer() -> Int {
+      #|  fn inner(x : Int) -> Int { x + 1 }
+      #|  inner(10)
+      #|}
+    ),
+    "fn outer() -> i32 {\n    let inner = |x: i32| -> i32 {\n        x + 1\n    };\n    inner(10)\n}\n",
+  )
+}
+
+///|
+test "rust: generic function" {
+  assert_rust(
+    (
+      #|fn identity[T](x : T) -> T { x }
+    ),
+    "fn identity<T>(x: T) -> T {\n    x\n}\n",
+  )
+}
+
+///|
+test "rust: tuple struct" {
+  assert_rust(
+    (
+      #|struct Wrapper(Int)
+    ),
+    "struct Wrapper(i32);\n",
+  )
+}
+
+///|
+test "rust: unary op" {
+  assert_rust(
+    (
+      #|fn negate(x : Int) -> Int { -x }
+    ),
+    "fn negate(x: i32) -> i32 {\n    -x\n}\n",
+  )
+}
+
+///|
+test "rust: logical not" {
+  assert_rust(
+    (
+      #|fn invert(b : Bool) -> Bool { not(b) }
+    ),
+    "fn invert(b: bool) -> bool {\n    not(b)\n}\n",
+  )
+}
+
+///|
+test "rust: chained method calls" {
+  assert_rust(
+    (
+      #|fn process(s : String) -> Int { s.trim().length() }
+    ),
+    "fn process(s: String) -> i32 {\n    s.trim().length()\n}\n",
+  )
+}
+
+///|
+test "rust: multiple statements" {
+  assert_rust(
+    (
+      #|fn multi() -> Int {
+      #|  let a = 1
+      #|  let b = 2
+      #|  let c = 3
+      #|  a + b + c
+      #|}
+    ),
+    "fn multi() -> i32 {\n    let a = 1;\n    let b = 2;\n    let c = 3;\n    a + b + c\n}\n",
+  )
+}
+
+///|
+test "rust: match with constructor and args" {
+  assert_rust(
+    (
+      #|fn unwrap_or(opt : Int?, default : Int) -> Int {
+      #|  match opt {
+      #|    Some(v) => v
+      #|    None => default
+      #|  }
+      #|}
+    ),
+    "fn unwrap_or(opt: Option<i32>, default: i32) -> i32 {\n    match opt {\n        Some(v) => v,\n        None => default,\n    }\n}\n",
+  )
+}
+
+///|
+test "rust: hole/todo" {
+  assert_rust(
+    (
+      #|fn placeholder() -> Int { _ }
+    ),
+    "fn placeholder() -> i32 {\n    todo!(\"...\")\n}\n",
+  )
+}
+
+///|
+test "rust: nested if" {
+  assert_rust(
+    (
+      #|fn clamp(x : Int, lo : Int, hi : Int) -> Int {
+      #|  if x < lo { lo } else { if x > hi { hi } else { x } }
+      #|}
+    ),
+    "fn clamp(x: i32, lo: i32, hi: i32) -> i32 {\n    if x < lo {\n        lo\n    } else {\n        if x > hi {\n            hi\n        } else {\n            x\n        }\n    }\n}\n",
+  )
+}
+
+///|
+test "rust: let with type annotation" {
+  assert_rust(
+    (
+      #|fn typed() -> Int {
+      #|  let x : Int = 42
+      #|  x
+      #|}
+    ),
+    "fn typed() -> i32 {\n    let x: i32 = 42;\n    x\n}\n",
+  )
+}
+
+///|
+test "rust: array index set" {
+  assert_rust(
+    (
+      #|fn set_first(arr : Array[Int]) -> Unit {
+      #|  arr[0] = 99
+      #|}
+    ),
+    "fn set_first(arr: Vec<i32>) {\n    arr[0] = 99\n}\n",
+  )
+}
