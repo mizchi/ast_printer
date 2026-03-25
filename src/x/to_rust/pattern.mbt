@@ -99,7 +99,13 @@ pub fn rust_print_pattern(buf : StringBuilder, pat : @syntax.Pattern) -> Unit {
       }
       buf.write_string(" }")
     }
-    Map(..) => rust_todo(buf, "map pattern")
+    Map(..) =>
+      rust_todo(
+        buf,
+        "map pattern matching",
+        reason="MoonBit can pattern match on map keys `{ \"key\": value }`. Rust HashMap has no pattern matching support.",
+        hint="Use `if let Some(value) = map.get(\"key\")` or extract values with `.get()` before matching.",
+      )
     Range(lhs~, rhs~, kind~, ..) => {
       rust_print_pattern(buf, lhs)
       match kind {
@@ -132,7 +138,13 @@ fn rust_print_array_patterns(
         first = false
         match p {
           Pattern(pat) => rust_print_pattern(buf, pat)
-          _ => rust_todo(buf, "array spread pattern")
+          _ =>
+            rust_todo(
+              buf,
+              "array spread pattern (string/bytes/const)",
+              reason="MoonBit supports spreading strings/bytes/constants in array patterns.",
+              hint="Extract the spread value before matching and compare manually.",
+            )
         }
       }
     }
@@ -145,7 +157,13 @@ fn rust_print_array_patterns(
         first = false
         match p {
           Pattern(pat) => rust_print_pattern(buf, pat)
-          _ => rust_todo(buf, "array spread pattern")
+          _ =>
+            rust_todo(
+              buf,
+              "array spread pattern (string/bytes/const)",
+              reason="MoonBit supports spreading strings/bytes/constants in array patterns.",
+              hint="Extract the spread value before matching and compare manually.",
+            )
         }
       }
       if not(first) {
@@ -162,7 +180,13 @@ fn rust_print_array_patterns(
         buf.write_string(", ")
         match p {
           Pattern(pat) => rust_print_pattern(buf, pat)
-          _ => rust_todo(buf, "array spread pattern")
+          _ =>
+            rust_todo(
+              buf,
+              "array spread pattern (string/bytes/const)",
+              reason="MoonBit supports spreading strings/bytes/constants in array patterns.",
+              hint="Extract the spread value before matching and compare manually.",
+            )
         }
       }
     }

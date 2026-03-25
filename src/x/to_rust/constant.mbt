@@ -51,7 +51,11 @@ pub fn rust_print_constant(buf : StringBuilder, c : @syntax.Constant) -> Unit {
       buf.write_char('"')
     }
     BigInt(s) => {
-      buf.write_string("/* TODO(transpile): BigInt */ ")
+      buf.write_string(
+        "/* TODO(transpile): BigInt literal\n * Reason: Rust has no built-in BigInt type.\n * Fix: Use `num_bigint::BigInt::from(",
+      )
+      buf.write_string(s)
+      buf.write_string(")` from the `num-bigint` crate. */ ")
       buf.write_string(s)
     }
   }

@@ -37,7 +37,13 @@ pub fn rust_print_expr(
         first = false
         match e {
           Regular(expr) => rust_print_expr(buf, expr)
-          Spread(..) => rust_todo(buf, "array spread")
+          Spread(..) =>
+            rust_todo(
+              buf,
+              "array spread in literal",
+              reason="MoonBit `[..expr]` spread has no direct vec! equivalent.",
+              hint="Use `let mut v = vec![...]; v.extend(other);` to concatenate.",
+            )
         }
       }
       buf.write_char(']')
@@ -63,7 +69,10 @@ pub fn rust_print_expr(
       buf.write_char(')')
       match attr {
         NoAttr => ()
-        Exclamation => buf.write_string(" /* ! */")
+        Exclamation =>
+          buf.write_string(
+            " /* NOTE: `!` = may raise error. Wrap in Result and use `?` or `.unwrap()`. */",
+          )
         Question => buf.write_char('?')
       }
     }
@@ -170,7 +179,13 @@ pub fn rust_print_expr(
       buf.write_char('}')
     }
     While(loop_cond~, loop_body~, label~, ..) => {
-      ignore(label)
+      match label {
+        Some(l) =>
+          buf.write_string(
+            "/* NOTE: MoonBit loop label `\{l.name}~` has no Rust equivalent. Use Rust loop labels `'\{l.name}: while` if needed. */ ",
+          )
+        None => ()
+      }
       buf.write_string("while ")
       rust_print_expr(buf, loop_cond, indent~)
       buf.write_string(" {\n")
@@ -181,7 +196,13 @@ pub fn rust_print_expr(
       buf.write_char('}')
     }
     ForEach(binders~, expr~, body~, label~, ..) => {
-      ignore(label)
+      match label {
+        Some(l) =>
+          buf.write_string(
+            "/* NOTE: MoonBit loop label `\{l.name}~`. Use Rust loop label `'\{l.name}: for` if needed. */ ",
+          )
+        None => ()
+      }
       buf.write_string("for ")
       let mut first = true
       for b in binders {
@@ -203,8 +224,20 @@ pub fn rust_print_expr(
       rust_print_indent(buf, indent)
       buf.write_char('}')
     }
-    For(..) => rust_todo(buf, "C-style for loop")
-    Loop(..) => rust_todo(buf, "functional loop")
+    For(..) =>
+      rust_todo(
+        buf,
+        "MoonBit `for` loop with binders/condition/continue",
+        reason="MoonBit's `for i = 0; i < n; i = i + 1 { ... }` has no direct Rust syntax.",
+        hint="Rewrite as `let mut i = 0; while i < n { ...; i += 1; }` or use iterators.",
+      )
+    Loop(..) =>
+      rust_todo(
+        buf,
+        "MoonBit functional `loop` with pattern matching",
+        reason="MoonBit `loop arg { pat => body }` is a tail-recursive loop with no Rust equivalent.",
+        hint="Rewrite as `loop { match arg { pat => { arg = next; continue }, ... } }`.",
+      )
 
     // Functions / closures
     Function(func~, ..) => {
@@ -284,8 +317,20 @@ pub fn rust_print_expr(
       rust_print_indent(buf, indent)
       rust_print_expr(buf, body, indent~)
     }
-    LetRec(..) => rust_todo(buf, "let rec")
-    LetAnd(..) => rust_todo(buf, "let and")
+    LetRec(..) =>
+      rust_todo(
+        buf,
+        "mutually recursive let bindings",
+        reason="MoonBit `fn`/`fn` mutual recursion in let scope has no Rust let equivalent.",
+        hint="Move recursive functions to module-level `fn` definitions.",
+      )
+    LetAnd(..) =>
+      rust_todo(
+        buf,
+        "simultaneous let bindings (let ... and ...)",
+        reason="MoonBit `let ... and ...` binds multiple values simultaneously.",
+        hint="Split into sequential `let` bindings if they don't depend on each other, or use a tuple `let (a, b) = ...`.",
+      )
 
     // Sequences
     Sequence(exprs~, last_expr~, ..) => {
@@ -373,7 +418,10 @@ pub fn rust_print_expr(
       buf.write_char(')')
       match attr {
         NoAttr => ()
-        Exclamation => buf.write_string(" /* ! */")
+        Exclamation =>
+          buf.write_string(
+            " /* NOTE: `!` = may raise error. Wrap in Result and use `?` or `.unwrap()`. */",
+          )
         Question => buf.write_char('?')
       }
     }
@@ -541,7 +589,13 @@ pub fn rust_print_expr(
     }
 
     // Defer
-    Defer(..) => rust_todo(buf, "defer")
+    Defer(..) =>
+      rust_todo(
+        buf,
+        "defer expression",
+        reason="MoonBit `defer` runs code at scope exit. Rust has no built-in defer.",
+        hint="Use a Drop guard: `let _guard = scopeguard::guard((), |_| { cleanup_code });` (scopeguard crate), or implement Drop on a wrapper struct.",
+      )
 
     // Hole
     Hole(kind~, ..) =>
@@ -610,9 +664,27 @@ pub fn rust_print_expr(
       }
       buf.write_char(')')
     }
-    MultilineString(..) => rust_todo(buf, "multiline string")
-    LexMatch(..) => rust_todo(buf, "lexmatch")
-    IsLexMatch(..) => rust_todo(buf, "is lexmatch")
+    MultilineString(..) =>
+      rust_todo(
+        buf,
+        "multiline string",
+        reason="MoonBit `#| ...` multiline strings need conversion to Rust raw strings.",
+        hint="Use a Rust raw string literal: `r#\"line1\nline2\"#` or `concat!()` / `include_str!()`.",
+      )
+    LexMatch(..) =>
+      rust_todo(
+        buf,
+        "lexmatch expression",
+        reason="MoonBit `lexmatch` is a lexer DSL with regex patterns. No Rust equivalent.",
+        hint="Use a lexer library (logos, nom) or manual regex matching with the `regex` crate.",
+      )
+    IsLexMatch(..) =>
+      rust_todo(
+        buf,
+        "is lexmatch expression",
+        reason="MoonBit `expr lexmatch? pat` checks if input matches a lex pattern.",
+        hint="Use `regex::Regex::is_match()` or a manual prefix check.",
+      )
     StaticAssert(body~, ..) => rust_print_expr(buf, body)
   }
 }

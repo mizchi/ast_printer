@@ -7,10 +7,23 @@ fn rust_print_indent(buf : StringBuilder, indent : Int) -> Unit {
 }
 
 ///|
-/// Emit a TODO comment for unsupported features.
-fn rust_todo(buf : StringBuilder, feature : String) -> Unit {
+/// Emit a TODO comment for unsupported features with reason and fix hint.
+fn rust_todo(
+  buf : StringBuilder,
+  feature : String,
+  reason? : String = "",
+  hint? : String = "",
+) -> Unit {
   buf.write_string("/* TODO(transpile): ")
   buf.write_string(feature)
+  if reason.length() > 0 {
+    buf.write_string("\n * Reason: ")
+    buf.write_string(reason)
+  }
+  if hint.length() > 0 {
+    buf.write_string("\n * Fix: ")
+    buf.write_string(hint)
+  }
   buf.write_string(" */")
 }
 
@@ -35,7 +48,7 @@ fn rust_print_impl(buf : StringBuilder, impl_ : @syntax.Impl) -> Unit {
     }
     TopTypeDef(type_decl) => rust_print_type_decl(buf, type_decl)
     TopLetDef(binder~, ty~, expr~, vis~, is_constant~, attrs~, doc~, ..) => {
-      ignore(doc)
+      rust_print_doc_string(buf, doc)
       rust_print_rust_attrs(buf, attrs)
       rust_print_visibility(buf, vis)
       if is_constant {
@@ -106,7 +119,13 @@ fn rust_print_impl(buf : StringBuilder, impl_ : @syntax.Impl) -> Unit {
       rust_print_expr(buf, expr)
       buf.write_char(';')
     }
-    TopView(..) => rust_todo(buf, "enumview")
+    TopView(..) =>
+      rust_todo(
+        buf,
+        "enumview",
+        reason="MoonBit enumview (pattern views) has no Rust equivalent.",
+        hint="Implement as a function that returns an enum for pattern matching, or use a match with manual destructuring.",
+      )
     TopImplRelation(self_ty~, trait_~, quantifiers~, vis~, ..) => {
       rust_print_visibility(buf, vis)
       buf.write_string("impl")
@@ -117,7 +136,13 @@ fn rust_print_impl(buf : StringBuilder, impl_ : @syntax.Impl) -> Unit {
       rust_print_type(buf, self_ty)
       buf.write_string(" {}")
     }
-    TopUsing(..) => rust_todo(buf, "using")
+    TopUsing(..) =>
+      rust_todo(
+        buf,
+        "using (import alias)",
+        reason="MoonBit `using` re-exports types/values from another package.",
+        hint="Replace with `use crate::module::Type;` or `pub use` for re-exports.",
+      )
   }
 }
 
@@ -170,7 +195,13 @@ fn rust_print_decl_body(
       rust_print_indent(buf, indent)
       buf.write_char('}')
     }
-    DeclStubs(_) => rust_todo(buf, "extern function stub")
+    DeclStubs(_) =>
+      rust_todo(
+        buf,
+        "extern function stub",
+        reason="MoonBit FFI stubs (extern) require platform-specific Rust FFI binding.",
+        hint="Use `extern \"C\" { fn name(...) -> ...; }` or link via `#[link]` attribute.",
+      )
     DeclNone => buf.write_string("{}")
   }
 }
@@ -213,7 +244,9 @@ fn rust_print_type_decl(buf : StringBuilder, decl : @syntax.TypeDecl) -> Unit {
           _ => buf.write_string("pub ")
         }
         if field.mut_ {
-          buf.write_string("/* mut */ ")
+          buf.write_string(
+            "/* NOTE: mutable field in MoonBit. In Rust, use &mut self methods or Cell/RefCell. */ ",
+          )
         }
         buf.write_string(field.name.label)
         buf.write_string(": ")
@@ -371,6 +404,16 @@ fn rust_print_visibility(buf : StringBuilder, vis : @syntax.Visibility) -> Unit 
         }
       }
     Priv(..) => () // private is default in Rust
+  }
+}
+
+///|
+/// Print MoonBit doc string as Rust doc comment.
+fn rust_print_doc_string(buf : StringBuilder, doc : @syntax.DocString) -> Unit {
+  for line in doc.content {
+    buf.write_string("///")
+    buf.write_string(line)
+    buf.write_char('\n')
   }
 }
 
