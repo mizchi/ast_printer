@@ -65,7 +65,7 @@ fn rust_print_impl(buf : StringBuilder, impl_ : @syntax.Impl) -> Unit {
       params~,
       ret_ty~,
       body~,
-      ..,
+      ..
     ) => {
       buf.write_string("impl")
       rust_print_quantifiers(buf, quantifiers)
@@ -145,7 +145,7 @@ fn rust_print_fun_decl(buf : StringBuilder, decl : @syntax.FunDecl) -> Unit {
   }
   buf.write_char(')')
   match decl.return_type {
-    Some(t) => {
+    Some(t) =>
       // Check if return type is Unit -> omit in Rust
       match t {
         Name(constr_id~, ..) =>
@@ -161,7 +161,6 @@ fn rust_print_fun_decl(buf : StringBuilder, decl : @syntax.FunDecl) -> Unit {
           rust_print_type(buf, t)
         }
       }
-    }
     None => ()
   }
   buf.write_char(' ')

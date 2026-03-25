@@ -442,7 +442,7 @@ pub fn rust_print_expr(
     Continue(..) => buf.write_string("continue")
 
     // Error handling
-    Try(body~, catch_~, try_else~, ..) => {
+    Try(body~, catch_~, try_else~, ..) =>
       if not(catch_.is_empty()) || try_else is Some(_) {
         buf.write_string("match ")
         rust_print_expr(buf, body, indent~)
@@ -484,8 +484,7 @@ pub fn rust_print_expr(
       } else {
         rust_print_expr(buf, body, indent~)
       }
-    }
-    TryOperator(body~, kind~, ..) => {
+    TryOperator(body~, kind~, ..) =>
       match kind {
         Question => {
           rust_print_expr(buf, body)
@@ -496,7 +495,6 @@ pub fn rust_print_expr(
           buf.write_string(".unwrap()")
         }
       }
-    }
 
     // Guard
     Guard(cond~, otherwise~, body~, ..) => {

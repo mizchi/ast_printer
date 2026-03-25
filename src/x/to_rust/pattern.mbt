@@ -27,13 +27,17 @@ pub fn rust_print_pattern(buf : StringBuilder, pat : @syntax.Pattern) -> Unit {
       match args {
         Some(args) if not(args.is_empty()) => {
           // Check if any arg has a label -> struct variant pattern
-          let has_labels = args.iter().any(fn(a) {
-            match a.kind {
-              Labelled(_) | LabelledPun(_) | LabelledOption(..) |
-              LabelledOptionPun(..) => true
-              _ => false
-            }
-          })
+          let has_labels = args
+            .iter()
+            .any(fn(a) {
+              match a.kind {
+                Labelled(_)
+                | LabelledPun(_)
+                | LabelledOption(..)
+                | LabelledOptionPun(..) => true
+                _ => false
+              }
+            })
           if has_labels {
             buf.write_string(" { ")
             rust_print_constr_pat_args_struct(buf, args)

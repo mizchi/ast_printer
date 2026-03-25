@@ -39,5 +39,15 @@ info-check:
 clean:
     moon clean
 
+# Verify generated Rust code compiles and passes cargo test
+cargo-test:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    tmpdir=$(mktemp -d)
+    trap 'rm -rf "$tmpdir"' EXIT
+    cd "$tmpdir" && cargo init --name test_generated -q
+    cp "{{justfile_directory()}}/fixtures/expected.rs" "$tmpdir/src/main.rs"
+    cargo test -q
+
 # CI checks
-ci: fmt-check info-check check test
+ci: fmt-check info-check check test cargo-test
