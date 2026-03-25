@@ -68,7 +68,28 @@ fn rust_print_impl(buf : StringBuilder, impl_ : @syntax.Impl) -> Unit {
       rust_print_expr(buf, expr)
       buf.write_char(';')
     }
-    TopTest(..) => () // skip test blocks
+    TopTest(expr~, name~, attrs~, doc~, ..) => {
+      rust_print_doc_string(buf, doc)
+      rust_print_rust_attrs(buf, attrs)
+      buf.write_string("#[test]\n")
+      buf.write_string("fn ")
+      match name {
+        Some((lit, _)) => {
+          // Convert test name to valid Rust identifier
+          let test_name = lit
+            .replace(old=" ", new="_")
+            .replace(old="-", new="_")
+            .replace(old=":", new="_")
+          buf.write_string("test_")
+          buf.write_string(test_name)
+        }
+        None => buf.write_string("test_unnamed")
+      }
+      buf.write_string("() {\n")
+      rust_print_indent(buf, 1)
+      rust_print_expr(buf, expr, indent=1)
+      buf.write_string("\n}")
+    }
     TopTrait(trait_decl) => rust_print_trait_decl(buf, trait_decl)
     TopImpl(
       self_ty~,
@@ -169,13 +190,45 @@ fn rust_print_fun_decl(buf : StringBuilder, decl : @syntax.FunDecl) -> Unit {
     None => ()
   }
   buf.write_char(')')
-  match decl.return_type {
-    Some(t) =>
-      if not(rust_is_unit_type(t)) {
-        buf.write_string(" -> ")
-        rust_print_type(buf, t)
+  // Handle return type + error type → Result<T, E>
+  match decl.error_type {
+    ErrorType(ty~) => {
+      buf.write_string(" -> Result<")
+      match decl.return_type {
+        Some(t) => rust_print_type(buf, t)
+        None => buf.write_string("()")
       }
-    None => ()
+      buf.write_string(", ")
+      rust_print_type(buf, ty)
+      buf.write_char('>')
+    }
+    DefaultErrorType(..) => {
+      buf.write_string(" -> Result<")
+      match decl.return_type {
+        Some(t) => rust_print_type(buf, t)
+        None => buf.write_string("()")
+      }
+      buf.write_string(", Box<dyn std::error::Error>>")
+    }
+    MaybeError(ty~) => {
+      buf.write_string(" -> Result<")
+      match decl.return_type {
+        Some(t) => rust_print_type(buf, t)
+        None => buf.write_string("()")
+      }
+      buf.write_string(", ")
+      rust_print_type(buf, ty)
+      buf.write_char('>')
+    }
+    _ =>
+      match decl.return_type {
+        Some(t) =>
+          if not(rust_is_unit_type(t)) {
+            buf.write_string(" -> ")
+            rust_print_type(buf, t)
+          }
+        None => ()
+      }
   }
   buf.write_char(' ')
 }
@@ -207,7 +260,45 @@ fn rust_print_decl_body(
 }
 
 ///|
+/// Map MoonBit derive trait name to Rust derive trait name(s).
+fn rust_map_derive_trait(name : String) -> String {
+  match name {
+    "Show" => "Debug"
+    "Eq" => "PartialEq, Eq"
+    "Compare" => "PartialOrd, Ord"
+    "Hash" => "Hash"
+    "Default" => "Default"
+    _ => name
+  }
+}
+
+///|
+fn rust_print_derive(
+  buf : StringBuilder,
+  deriving : @list.List[@syntax.DerivingDirective],
+) -> Unit {
+  if not(deriving.is_empty()) {
+    buf.write_string("#[derive(")
+    let mut first = true
+    for d in deriving {
+      if not(first) {
+        buf.write_string(", ")
+      }
+      first = false
+      // Extract trait name from TypeName
+      let trait_name = match d.type_name.name {
+        Ident(name~) => rust_map_derive_trait(name)
+        Dot(pkg~, id~) => pkg + "::" + id
+      }
+      buf.write_string(trait_name)
+    }
+    buf.write_string(")]\n")
+  }
+}
+
+///|
 fn rust_print_type_decl(buf : StringBuilder, decl : @syntax.TypeDecl) -> Unit {
+  rust_print_derive(buf, decl.deriving)
   match decl.components {
     Variant(constrs) => {
       rust_print_visibility(buf, decl.type_vis)
@@ -317,19 +408,6 @@ fn rust_print_type_decl(buf : StringBuilder, decl : @syntax.TypeDecl) -> Unit {
         }
       }
     }
-  }
-  if not(decl.deriving.is_empty()) {
-    // Note: derive is printed before the type in Rust, but we append as comment for now
-    buf.write_string(" /* derive(")
-    let mut first = true
-    for d in decl.deriving {
-      if not(first) {
-        buf.write_string(", ")
-      }
-      first = false
-      rust_print_type_name(buf, d.type_name)
-    }
-    buf.write_string(") */")
   }
 }
 

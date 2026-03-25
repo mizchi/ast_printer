@@ -243,3 +243,17 @@ fn complex(x : Int) -> Int {
 fn compare(a : Int, b : Int) -> Bool {
   a == b || a != b && a <= b
 }
+
+struct ColorPoint { x : Int; y : Int; color : String } derive(Show, Eq)
+
+fn sum_range() -> Int {
+  let mut total = 0
+  for i = 0; i < 10; i = i + 1 {
+    total = total + i
+  }
+  total
+}
+
+test "addition" {
+  assert_eq(1 + 1, 2)
+}

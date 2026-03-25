@@ -144,6 +144,25 @@ fn complex(x: i32) -> i32 {
 fn compare(a: i32, b: i32) -> bool {
     a == b || a != b && a <= b
 }
+#[derive(Debug, PartialEq, Eq)]
+struct ColorPoint {
+    pub x: i32,
+    pub y: i32,
+    pub color: String,
+}
+fn sum_range() -> i32 {
+    let mut total = 0;
+    let mut i = 0;
+    while i < 10 {
+        total = total + i;
+        i = i + 1;
+    };
+    total
+}
+#[test]
+fn test_addition() {
+    assert_eq!(1 + 1, 2)
+}
 
 #[cfg(test)]
 mod tests {
@@ -282,5 +301,18 @@ mod tests {
     fn test_compare() {
         assert!(compare(1, 1));   // 1==1 is true
         assert!(compare(1, 2));   // 1!=2 && 1<=2 is true
+    }
+
+    #[test]
+    fn test_derive_struct() {
+        let p = ColorPoint { x: 1, y: 2, color: "red".to_string() };
+        let q = ColorPoint { x: 1, y: 2, color: "red".to_string() };
+        assert_eq!(p, q);
+        assert_eq!(format!("{:?}", p), "ColorPoint { x: 1, y: 2, color: \"red\" }");
+    }
+
+    #[test]
+    fn test_sum_range() {
+        assert_eq!(sum_range(), 45);  // 0+1+2+...+9
     }
 }

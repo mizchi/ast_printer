@@ -178,7 +178,7 @@ pub fn rust_print_expr(
       rust_print_indent(buf, indent)
       buf.write_char('}')
     }
-    While(loop_cond~, loop_body~, label~, ..) => {
+    While(loop_cond~, loop_body~, while_else~, label~, ..) => {
       match label {
         Some(l) =>
           buf.write_string(
@@ -194,8 +194,18 @@ pub fn rust_print_expr(
       buf.write_char('\n')
       rust_print_indent(buf, indent)
       buf.write_char('}')
+      match while_else {
+        Some(e) => {
+          buf.write_string(
+            " /* while-else: Rust has no while-else. This block runs when the loop condition is initially false or loop completes without break. */;\n",
+          )
+          rust_print_indent(buf, indent)
+          rust_print_expr(buf, e, indent~)
+        }
+        None => ()
+      }
     }
-    ForEach(binders~, expr~, body~, label~, ..) => {
+    ForEach(binders~, expr~, body~, else_block~, label~, ..) => {
       match label {
         Some(l) =>
           buf.write_string(
@@ -223,21 +233,108 @@ pub fn rust_print_expr(
       buf.write_char('\n')
       rust_print_indent(buf, indent)
       buf.write_char('}')
+      match else_block {
+        Some(e) => {
+          buf.write_string(
+            " /* for-else: Rust has no for-else. This block runs when the iterator is empty or loop completes without break. */;\n",
+          )
+          rust_print_indent(buf, indent)
+          rust_print_expr(buf, e, indent~)
+        }
+        None => ()
+      }
     }
-    For(..) =>
-      rust_todo(
-        buf,
-        "MoonBit `for` loop with binders/condition/continue",
-        reason="MoonBit's `for i = 0; i < n; i = i + 1 { ... }` has no direct Rust syntax.",
-        hint="Rewrite as `let mut i = 0; while i < n { ...; i += 1; }` or use iterators.",
-      )
-    Loop(..) =>
-      rust_todo(
-        buf,
-        "MoonBit functional `loop` with pattern matching",
-        reason="MoonBit `loop arg { pat => body }` is a tail-recursive loop with no Rust equivalent.",
-        hint="Rewrite as `loop { match arg { pat => { arg = next; continue }, ... } }`.",
-      )
+    For(binders~, condition~, continue_block~, body~, for_else~, label~, ..) => {
+      // Desugar: for i = 0; cond; i = i + 1 { body }
+      //       → { let mut i = 0; while cond { body; i = i + 1; } }
+      match label {
+        Some(l) =>
+          buf.write_string(
+            "/* NOTE: loop label `\{l.name}~`. Use `'\{l.name}: while` in Rust. */ ",
+          )
+        None => ()
+      }
+      // Emit binders as let mut
+      for b in binders {
+        buf.write_string("let mut ")
+        buf.write_string(b.0.name)
+        buf.write_string(" = ")
+        rust_print_expr(buf, b.1, indent~)
+        buf.write_string(";\n")
+        rust_print_indent(buf, indent)
+      }
+      buf.write_string("while ")
+      match condition {
+        Some(c) => rust_print_expr(buf, c, indent~)
+        None => buf.write_string("true")
+      }
+      buf.write_string(" {\n")
+      rust_print_indent(buf, indent + 1)
+      rust_print_expr(buf, body, indent=indent + 1)
+      // Emit continue block (update expressions)
+      if not(continue_block.is_empty()) {
+        buf.write_string(";\n")
+        for cb in continue_block {
+          rust_print_indent(buf, indent + 1)
+          buf.write_string(cb.0.name)
+          buf.write_string(" = ")
+          rust_print_expr(buf, cb.1, indent=indent + 1)
+          buf.write_string(";\n")
+        }
+      } else {
+        buf.write_char('\n')
+      }
+      rust_print_indent(buf, indent)
+      buf.write_char('}')
+      match for_else {
+        Some(e) => {
+          buf.write_string(" /* for-else: */ ;\n")
+          rust_print_indent(buf, indent)
+          rust_print_expr(buf, e, indent~)
+        }
+        None => ()
+      }
+    }
+    Loop(arg~, body~, label~, ..) => {
+      // Desugar: loop arg { pat => expr }
+      //       → { let mut _loop_arg = arg; loop { match _loop_arg { pat => { ... } } } }
+      match label {
+        Some(l) =>
+          buf.write_string(
+            "/* NOTE: loop label `\{l.name}~`. Use `'\{l.name}: loop` in Rust. */ ",
+          )
+        None => ()
+      }
+      buf.write_string("{\n")
+      rust_print_indent(buf, indent + 1)
+      buf.write_string("let mut _loop_arg = ")
+      rust_print_expr(buf, arg, indent=indent + 1)
+      buf.write_string(";\n")
+      rust_print_indent(buf, indent + 1)
+      buf.write_string("loop {\n")
+      rust_print_indent(buf, indent + 2)
+      buf.write_string("match _loop_arg {\n")
+      for c in body {
+        rust_print_indent(buf, indent + 3)
+        rust_print_pattern(buf, c.pattern)
+        match c.guard_ {
+          Some(g) => {
+            buf.write_string(" if ")
+            rust_print_expr(buf, g, indent=indent + 3)
+          }
+          None => ()
+        }
+        buf.write_string(" => ")
+        rust_print_expr(buf, c.body, indent=indent + 3)
+        buf.write_string(",\n")
+      }
+      rust_print_indent(buf, indent + 2)
+      buf.write_string("}\n")
+      rust_print_indent(buf, indent + 1)
+      buf.write_string("}\n")
+      rust_print_indent(buf, indent)
+      buf.write_char('}')
+    }
 
     // Functions / closures
     Function(func~, ..) => {
@@ -664,13 +761,48 @@ pub fn rust_print_expr(
       }
       buf.write_char(')')
     }
-    MultilineString(..) =>
-      rust_todo(
-        buf,
-        "multiline string",
-        reason="MoonBit `#| ...` multiline strings need conversion to Rust raw strings.",
-        hint="Use a Rust raw string literal: `r#\"line1\nline2\"#` or `concat!()` / `include_str!()`.",
-      )
+    MultilineString(elems~, ..) => {
+      // Convert to concat! of lines or a single string
+      buf.write_string("concat!(")
+      let mut first = true
+      for e in elems {
+        if not(first) {
+          buf.write_string(", \"\\n\", ")
+        }
+        first = false
+        match e {
+          String(s) => {
+            buf.write_char('"')
+            buf.write_string(s)
+            buf.write_char('"')
+          }
+          Interp(interp_elems) => {
+            // Lines with interpolation become format!()
+            buf.write_string("&format!(\"")
+            let args : Array[StringBuilder] = []
+            for ie in interp_elems {
+              match ie {
+                Literal(repr~, ..) => buf.write_string(repr)
+                Expr(expr~, ..) => {
+                  buf.write_string("{}")
+                  let arg_buf = StringBuilder::new()
+                  rust_print_expr(arg_buf, expr)
+                  args.push(arg_buf)
+                }
+                Source(_) => ()
+              }
+            }
+            buf.write_char('"')
+            for arg in args {
+              buf.write_string(", ")
+              buf.write_string(arg.to_string())
+            }
+            buf.write_char(')')
+          }
+        }
+      }
+      buf.write_char(')')
+    }
     LexMatch(..) =>
       rust_todo(
         buf,

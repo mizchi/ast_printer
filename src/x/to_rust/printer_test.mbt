@@ -867,3 +867,69 @@ test "rust: comparison operators" {
     "fn compare(a: i32, b: i32) -> bool {\n    a == b || a != b && a <= b\n}\n",
   )
 }
+
+///|
+test "rust: derive Show" {
+  assert_rust(
+    (
+      #|struct Point { x : Int; y : Int } derive(Show)
+    ),
+    "#[derive(Debug)]\nstruct Point {\n    pub x: i32,\n    pub y: i32,\n}\n",
+  )
+}
+
+///|
+test "rust: derive multiple" {
+  assert_rust(
+    (
+      #|struct Point { x : Int; y : Int } derive(Show, Eq, Hash)
+    ),
+    "#[derive(Debug, PartialEq, Eq, Hash)]\nstruct Point {\n    pub x: i32,\n    pub y: i32,\n}\n",
+  )
+}
+
+///|
+test "rust: derive on enum" {
+  assert_rust(
+    (
+      #|enum Color { Red; Green; Blue } derive(Show, Eq)
+    ),
+    "#[derive(Debug, PartialEq, Eq)]\nenum Color {\n    Red,\n    Green,\n    Blue,\n}\n",
+  )
+}
+
+///|
+test "rust: error type in signature" {
+  assert_rust(
+    (
+      #|fn parse(s : String) -> Int raise { 42 }
+    ),
+    "fn parse(s: String) -> Result<i32, Box<dyn std::error::Error>> {\n    42\n}\n",
+  )
+}
+
+///|
+test "rust: test block" {
+  assert_rust(
+    (
+      #|test "addition" { assert_eq(1 + 1, 2) }
+    ),
+    "#[test]\nfn test_addition() {\n    assert_eq(1 + 1, 2)\n}\n",
+  )
+}
+
+///|
+test "rust: C-style for loop" {
+  assert_rust(
+    (
+      #|fn sum_range() -> Int {
+      #|  let mut total = 0
+      #|  for i = 0; i < 10; i = i + 1 {
+      #|    total = total + i
+      #|  }
+      #|  total
+      #|}
+    ),
+    "fn sum_range() -> i32 {\n    let mut total = 0;\n    let mut i = 0;\n    while i < 10 {\n        total = total + i;\n        i = i + 1;\n    };\n    total\n}\n",
+  )
+}
